@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+
+# ============================================
+# gin-go-migration — Simple SQL migration tool for Go projects
+# Usage:
+#   gin-go-migration create <migration_name> [-o output_dir]
+# ============================================
+
+COMMAND=$1
+NAME=$2
+OUTPUT_DIR=""
+
+# Function: find project root (the one containing .git or go.mod)
+find_project_root() {
+  local dir="$PWD"
+  while [ "$dir" != "/" ]; do
+    if [ -d "$dir/.git" ] || [ -f "$dir/go.mod" ]; then
+      echo "$dir"
+      return
+    fi
+    dir=$(dirname "$dir")
+  done
+  # fallback to current directory if not found
+  echo "$PWD"
+}
+
+# Function: generate timestamp (YYYYMMDDHHMMSS)
+generate_timestamp() {
+  date +"%Y%m%d%H%M%S"
+}
+
+# Function: print usage
+show_help() {
+  echo "gin-go-migration — SQL migration generator"
+  echo ""
+  echo "Usage:"
+  echo "  gin-go-migration create <migration_name> [-o output_dir]"
+  echo ""
+  echo "Options:"
+  echo "  -o, --output    Specify output directory (default: database/migrations in project root)"
+  echo ""
+  echo "Examples:"
+  echo "  gin-go-migration create add_new_table"
+  echo "  gin-go-migration create add_user_table -o ./sql/migrations"
+}
+
+# Parse optional arguments
+shift 2 || true
+while [[ "$#" -gt 0 ]]; do
+  case $1 in
+    -o|--output)
+      OUTPUT_DIR=$2
+      shift
+      ;;
+    *)
+      ;;
+  esac
+  shift
+done
+
+# Main logic functions
+create_migration() {
+  if [ -z "$NAME" ]; then
+    echo "❌ Error: migration name is required."
+    echo ""
+    show_help
+    exit 1
+  fi
+
+  PROJECT_ROOT=$(find_project_root)
+
+  # Default output dir if not provided
+  if [ -z "$OUTPUT_DIR" ]; then
+    OUTPUT_DIR="$PROJECT_ROOT/database/migrations"
+  fi
+
+  # Make sure directory exists
+  mkdir -p "$OUTPUT_DIR"
+
+  TIMESTAMP=$(generate_timestamp)
+  UP_FILE="${OUTPUT_DIR}/${TIMESTAMP}_${NAME}.up.sql"
+  DOWN_FILE="${OUTPUT_DIR}/${TIMESTAMP}_${NAME}.down.sql"
+
+  # Create files
+  {
+    echo "-- Migration: $NAME"
+    echo "-- Created at: $(date)"
+    echo ""
+    echo "-- Write your UP SQL here"
+  } > "$UP_FILE"
+
+  {
+    echo "-- Rollback: $NAME"
+    echo "-- Created at: $(date)"
+    echo ""
+    echo "-- Write your DOWN SQL here"
+  } > "$DOWN_FILE"
+
+  echo "✅ Migration files created:"
+  echo " - $UP_FILE"
+  echo " - $DOWN_FILE"
+}
+
+# Command handling
+case "$COMMAND" in
+  create)
+    create_migration
+    ;;
+  help|-h|--help)
+    show_help
+    ;;
+  *)
+    echo "❌ Unknown or missing command."
+    echo ""
+    show_help
+    exit 1
+    ;;
+esac
