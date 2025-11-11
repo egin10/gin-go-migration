@@ -1,4 +1,6 @@
-# 🧩 gin-go-migration
+# 🧩 gin-go-migration 
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 **`gin-go-migration`** is a simple CLI tool for generating SQL migration files.  
 It’s designed for **Golang** projects and works seamlessly on **macOS**, **Linux**, and **Windows (CMD / PowerShell / Git Bash)**.
@@ -168,7 +170,4 @@ Example `.down.sql` content:
 
 ---
 
-## 📄 License
-
-MIT License © 2025  
 Built with ❤️
