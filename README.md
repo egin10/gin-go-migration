@@ -71,11 +71,6 @@ gin-go-migration help
    C:\Program Files\gin-go-migration
    ```
 2. Add that folder to your **PATH environment variable**.
-3. (Optional) Create a file `gin-go-migration.bat` containing:
-   ```bat
-   @echo off
-   bash "%~dp0gin-go-migration" %*
-   ```
 
 ---
 
