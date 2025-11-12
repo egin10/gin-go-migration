@@ -1,118 +1,245 @@
 #!/usr/bin/env bash
 
-# ============================================
-# gin-go-migration — Simple SQL migration tool for Go projects
-# Usage:
-#   gin-go-migration create <migration_name> [-o output_dir]
-# ============================================
+# ===========================================================
+# gin-go-migration
+# CLI tool for creating and running SQL migrations in Go
+# ===========================================================
+
+set -e
+
+VERSION="1.1.0"
+REPO_URL="https://raw.githubusercontent.com/egin10/gin-go-migration/main/gin-go-migration"
 
 COMMAND=$1
-NAME=$2
-OUTPUT_DIR=""
+shift || true
 
-# Function: find project root (the one containing .git or go.mod)
-find_project_root() {
-  local dir="$PWD"
-  while [ "$dir" != "/" ]; do
-    if [ -d "$dir/.git" ] || [ -f "$dir/go.mod" ]; then
-      echo "$dir"
-      return
-    fi
-    dir=$(dirname "$dir")
-  done
-  # fallback to current directory if not found
-  echo "$PWD"
+# Default config
+SOURCE_DIR="database/migrations"
+DB_TYPE="postgres"
+DB_USER=""
+DB_PASS=""
+DB_HOST="localhost"
+DB_PORT="5432"
+DB_NAME=""
+SSL_MODE="disable"
+ACTION=""
+
+# ===========================================================
+# FUNCTIONS
+# ===========================================================
+
+function check_migrate_installed() {
+  if ! command -v migrate &> /dev/null; then
+    echo "❌ 'migrate' command not found!"
+    echo "Please install golang-migrate first:"
+    echo ""
+    echo "👉 macOS / Linux:"
+    echo "   curl -L https://packagecloud.io/golang-migrate/migrate/gpgkey | sudo apt-key add -"
+    echo "   sudo apt-get install -y migrate"
+    echo ""
+    echo "👉 Or manually from https://github.com/golang-migrate/migrate/releases"
+    exit 1
+  fi
 }
 
-# Function: generate timestamp (YYYYMMDDHHMMSS)
-generate_timestamp() {
-  date +"%Y%m%d%H%M%S"
-}
-
-# Function: print usage
-show_help() {
-  echo "gin-go-migration — SQL migration generator"
-  echo ""
+function show_help() {
   echo "Usage:"
-  echo "  gin-go-migration create <migration_name> [-o output_dir]"
-  echo ""
-  echo "Options:"
-  echo "  -o, --output    Specify output directory (default: database/migrations in project root)"
+  echo "  gin-go-migration create <name> [-o output_dir]"
+  echo "  gin-go-migration migrate -s <source> -db <type> -u <user> -p <pass> -h <host> -port <port> -n <dbname> [-ssl <mode>] <up|down [-N]>"
+  echo "  gin-go-migration update"
+  echo "  gin-go-migration version"
   echo ""
   echo "Examples:"
-  echo "  gin-go-migration create add_new_table"
-  echo "  gin-go-migration create add_user_table -o ./sql/migrations"
+  echo "  gin-go-migration create add_users_table"
+  echo "  gin-go-migration migrate -s database/migrations -db postgres -u mintegra -p secret -h 127.0.0.1 -port 5432 -n operation up"
+  echo "  gin-go-migration migrate -s database/migrations -db postgres -u mintegra -p secret -h 127.0.0.1 -port 5432 -n operation down -1"
+  echo "  gin-go-migration update"
+  echo "  gin-go-migration version"
+  exit 0
 }
 
-# Parse optional arguments
-shift 2 || true
-while [[ "$#" -gt 0 ]]; do
-  case $1 in
-    -o|--output)
-      OUTPUT_DIR=$2
-      shift
-      ;;
-    *)
-      ;;
-  esac
-  shift
-done
+function check_for_update() {
+  echo "🔍 Checking for updates..."
 
-# Main logic functions
-create_migration() {
-  if [ -z "$NAME" ]; then
-    echo "❌ Error: migration name is required."
-    echo ""
-    show_help
+  # Check dependencies
+  if ! command -v curl >/dev/null 2>&1 && ! command -v wget >/dev/null 2>&1; then
+    echo "❌ curl or wget is required for update."
     exit 1
   fi
 
-  PROJECT_ROOT=$(find_project_root)
-
-  # Default output dir if not provided
-  if [ -z "$OUTPUT_DIR" ]; then
-    OUTPUT_DIR="$PROJECT_ROOT/database/migrations"
+  # Download remote version
+  TMP_FILE=$(mktemp)
+  if command -v curl >/dev/null 2>&1; then
+    curl -s -L "$REPO_URL" -o "$TMP_FILE"
+  else
+    wget -q "$REPO_URL" -O "$TMP_FILE"
   fi
 
-  # Make sure directory exists
-  mkdir -p "$OUTPUT_DIR"
+  REMOTE_VERSION=$(grep -m1 '^VERSION=' "$TMP_FILE" | cut -d'"' -f2)
 
-  TIMESTAMP=$(generate_timestamp)
-  UP_FILE="${OUTPUT_DIR}/${TIMESTAMP}_${NAME}.up.sql"
-  DOWN_FILE="${OUTPUT_DIR}/${TIMESTAMP}_${NAME}.down.sql"
+  if [ -z "$REMOTE_VERSION" ]; then
+    echo "⚠️ Unable to check remote version."
+    rm -f "$TMP_FILE"
+    exit 1
+  fi
 
-  # Create files
-  {
-    echo "-- Migration: $NAME"
-    echo "-- Created at: $(date)"
-    echo ""
-    echo "-- Write your UP SQL here"
-  } > "$UP_FILE"
-
-  {
-    echo "-- Rollback: $NAME"
-    echo "-- Created at: $(date)"
-    echo ""
-    echo "-- Write your DOWN SQL here"
-  } > "$DOWN_FILE"
-
-  echo "✅ Migration files created:"
-  echo " - $UP_FILE"
-  echo " - $DOWN_FILE"
+  if [ "$REMOTE_VERSION" != "$VERSION" ]; then
+    echo "🚀 New version available: $REMOTE_VERSION (current: $VERSION)"
+    read -p "Update now? (y/N): " yn
+    case $yn in
+      [Yy]* )
+        chmod +x "$TMP_FILE"
+        if [[ "$OSTYPE" == "linux-gnu"* || "$OSTYPE" == "darwin"* ]]; then
+          sudo mv "$TMP_FILE" /usr/local/bin/gin-go-migration
+        elif [[ "$OS" == "Windows_NT" ]]; then
+          mv "$TMP_FILE" "C:\\Program Files\\gin-go-migration\\gin-go-migration"
+        else
+          echo "⚠️ Unsupported OS for auto-update."
+          rm -f "$TMP_FILE"
+          exit 1
+        fi
+        echo "✅ gin-go-migration updated to $REMOTE_VERSION"
+        ;;
+      * )
+        echo "❌ Update canceled."
+        rm -f "$TMP_FILE"
+        ;;
+    esac
+  else
+    echo "✅ You’re already using the latest version ($VERSION)"
+    rm -f "$TMP_FILE"
+  fi
 }
 
-# Command handling
+function show_version() {
+  echo "gin-go-migration version $VERSION"
+}
+
+# ===========================================================
+# COMMAND HANDLER
+# ===========================================================
+
 case "$COMMAND" in
   create)
-    create_migration
+    NAME=$1
+    shift || true
+    while [[ $# -gt 0 ]]; do
+      case $1 in
+        -o|--output)
+          SOURCE_DIR="$2"
+          shift 2
+          ;;
+        *)
+          shift
+          ;;
+      esac
+    done
+
+    if [ -z "$NAME" ]; then
+      echo "❌ Missing migration name!"
+      echo "Usage: gin-go-migration create <name>"
+      exit 1
+    fi
+
+    TIMESTAMP=$(date +"%Y%m%d%H%M%S")
+    mkdir -p "$SOURCE_DIR"
+    UP_FILE="$SOURCE_DIR/${TIMESTAMP}_${NAME}.up.sql"
+    DOWN_FILE="$SOURCE_DIR/${TIMESTAMP}_${NAME}.down.sql"
+
+    echo "-- Migration: $NAME" > "$UP_FILE"
+    echo "-- Created at: $(date)" >> "$UP_FILE"
+    echo -e "\n-- Write your UP SQL here" >> "$UP_FILE"
+
+    echo "-- Rollback: $NAME" > "$DOWN_FILE"
+    echo "-- Created at: $(date)" >> "$DOWN_FILE"
+    echo -e "\n-- Write your DOWN SQL here" >> "$DOWN_FILE"
+
+    echo "✅ Migration files created:"
+    echo " - $UP_FILE"
+    echo " - $DOWN_FILE"
     ;;
-  help|-h|--help)
+
+  migrate)
+    check_migrate_installed
+
+    while [[ $# -gt 0 ]]; do
+      case $1 in
+        -s|--source)
+          SOURCE_DIR="$2"
+          shift 2
+          ;;
+        -db|--database)
+          DB_TYPE="$2"
+          shift 2
+          ;;
+        -u|--user)
+          DB_USER="$2"
+          shift 2
+          ;;
+        -p|--password)
+          DB_PASS="$2"
+          shift 2
+          ;;
+        -h|--host)
+          DB_HOST="$2"
+          shift 2
+          ;;
+        -port|--port)
+          DB_PORT="$2"
+          shift 2
+          ;;
+        -n|--name)
+          DB_NAME="$2"
+          shift 2
+          ;;
+        -ssl|--sslmode)
+          SSL_MODE="$2"
+          shift 2
+          ;;
+        up|down)
+          ACTION=$1
+          shift
+          ;;
+        *)
+          ACTION_ARGS="$1"
+          shift
+          ;;
+      esac
+    done
+
+    if [ -z "$ACTION" ]; then
+      echo "❌ Missing action! (use: up | down [-N])"
+      exit 1
+    fi
+
+    if [ -z "$DB_USER" ] || [ -z "$DB_PASS" ] || [ -z "$DB_NAME" ]; then
+      echo "❌ Missing database credentials! Please provide -u, -p, and -n"
+      exit 1
+    fi
+
+    DB_URL="${DB_TYPE}://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${SSL_MODE}"
+
+    echo "🚀 Running migration..."
+    echo "   Source: ${SOURCE_DIR}"
+    echo "   DB URL: ${DB_URL}"
+
+    migrate -path "$SOURCE_DIR" -database "$DB_URL" "$ACTION" $ACTION_ARGS
+    ;;
+
+  update)
+    check_for_update
+    ;;
+
+  version)
+    show_version
+    ;;
+
+  help|--help|-h)
     show_help
     ;;
+
   *)
-    echo "❌ Unknown or missing command."
-    echo ""
+    echo "❌ Unknown command: $COMMAND"
     show_help
-    exit 1
     ;;
 esac

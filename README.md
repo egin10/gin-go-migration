@@ -2,19 +2,16 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-**`gin-go-migration`** is a simple CLI tool for generating SQL migration files.  
-It’s designed for **Golang** projects and works seamlessly on **macOS**, **Linux**, and **Windows (CMD / PowerShell / Git Bash)**.
+**gin-go-migration** is a lightweight Bash-based CLI tool inspired by php artisan, designed to simplify SQL-based database migrations for Golang projects.
 
 ---
 
-### ⚙️ Features
+### 📦 Features
 
-- 🪶 Automatically generates `.up.sql` and `.down.sql` migration files with a timestamp format (`YYYYMMDDHHMMSS`)
-- 📂 Saves generated files by default to `database/migrations/`
-- 🧭 Supports custom output directory via the `-o` flag
-- 🧠 Automatically detects project root (based on `.git` or `go.mod`)
-- 💻 Runs on all OSes without requiring `./`
-- 🧹 Comes with a built-in installer and uninstaller
+- Automatically generates timestamped .up.sql and .down.sql migration files.
+- Supports running migrations via [golang-migrate](https://github.com/golang-migrate/migrate).
+- Works seamlessly on Windows, macOS, and Linux.
+- Allows custom database connection parameters.
 
 ---
 
@@ -27,7 +24,7 @@ gin-go-migration
 install.sh
 ```
 
-### 🔧 macOS & Linux
+### macOS & Linux
 
 ```bash
 chmod +x install.sh
@@ -41,12 +38,12 @@ This script will:
 
 Example:
 ```bash
-gin-go-migration create add_new_table
+gin-go-migration help
 ```
 
 ---
 
-### 🪟 Windows
+### Windows
 
 #### Option 1: Using **Git Bash**
 ```bash
@@ -65,7 +62,7 @@ After installation, you can use it directly from:
 
 Example:
 ```bash
-gin-go-migration create add_new_table
+gin-go-migration help
 ```
 
 #### Option 2: Manual (if not using Git Bash)
@@ -96,23 +93,21 @@ This will remove:
 
 ---
 
-## 🧰 Usage
+## 🚀 Usage
 
-### 🧱 Create a new migration
+### 1. Create a New Migration File
 
 ```bash
 gin-go-migration create add_new_table
 ```
-
+This will generate two files inside the `database/migrations/` folder:
 Default output:
 ```
 database/migrations/20251111224220_add_new_table.up.sql
 database/migrations/20251111224220_add_new_table.down.sql
 ```
 
----
-
-### 📂 Custom output directory
+#### 📂 Custom output directory
 
 ```bash
 gin-go-migration create add_new_table -o ./sql/migrations
@@ -124,10 +119,41 @@ sql/migrations/20251111224220_add_new_table.up.sql
 sql/migrations/20251111224220_add_new_table.down.sql
 ```
 
----
 
-### ❓ Help
+### 2. Run Migrations
+The following command executes migrations using go-migrate:
+```
+gin-go-migration migrate -s database/migrations -db postgres -u mintegra -p 'password' -port 5434 -ssl disable up
+```
+Expected output:
+```
+Running migration...
+Migrating from: database/migrations
+Database: postgres://mintegra:password@localhost:5434/yourdb?sslmode=disable
+Migration successful!
+```
 
+### 3. Rollback Migrations
+To rollback one migration step:
+```
+gin-go-migration migrate -s database/migrations -db postgres -u mintegra -p 'password' -port 5434 -ssl disable down -1
+```
+
+### 4. Update
+Checking for the lastest version, then download it.
+
+```
+gin-go-migration update
+```
+
+### 5. Update
+Checking for the current version installed.
+
+```
+gin-go-migration version
+```
+
+### 6. Help
 ```bash
 gin-go-migration help
 ```
@@ -135,30 +161,17 @@ gin-go-migration help
 Displays a list of available commands and usage examples.
 
 ---
+## Notes
 
-## 🧾 Example Output
+- The script automatically checks if go-migrate (from golang-migrate) is installed.
+If not found, it will show: 
 
-```
-✅ Migration files created:
- - database/migrations/20251111224220_add_new_table.up.sql
- - database/migrations/20251111224220_add_new_table.down.sql
-```
-
-Example `.up.sql` content:
-```sql
--- Migration: add_new_table
--- Created at: Tue Nov 11 22:42:20 WIB 2025
-
--- Write your UP SQL here
-```
-
-Example `.down.sql` content:
-```sql
--- Rollback: add_new_table
--- Created at: Tue Nov 11 22:42:20 WIB 2025
-
--- Write your DOWN SQL here
-```
+   ```
+   [ERROR] go-migrate not found in the system.
+   Please install it with:
+   go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+   ```
+- Default migration directory is `database/migrations`.
 
 ---
 
