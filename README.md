@@ -118,20 +118,20 @@ sql/migrations/20251111224220_add_new_table.down.sql
 ### 2. Run Migrations
 The following command executes migrations using go-migrate:
 ```
-gin-go-migration migrate -s database/migrations -db postgres -u mintegra -p 'password' -port 5434 -ssl disable up
+gin-go-migration migrate -s database/migrations -db postgres -u username -p 'password' -port 5434 -ssl disable up
 ```
 Expected output:
 ```
 Running migration...
 Migrating from: database/migrations
-Database: postgres://mintegra:password@localhost:5434/yourdb?sslmode=disable
+Database: postgres://username:password@localhost:5434/yourdb?sslmode=disable
 Migration successful!
 ```
 
 ### 3. Rollback Migrations
 To rollback one migration step:
 ```
-gin-go-migration migrate -s database/migrations -db postgres -u mintegra -p 'password' -port 5434 -ssl disable down -1
+gin-go-migration migrate -s database/migrations -db postgres -u username -p 'password' -port 5434 -ssl disable down -1
 ```
 
 ### 4. Update
