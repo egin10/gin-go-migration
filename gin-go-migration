@@ -51,8 +51,8 @@ function show_help() {
   echo ""
   echo "Examples:"
   echo "  gin-go-migration create add_users_table"
-  echo "  gin-go-migration migrate -s database/migrations -db postgres -u mintegra -p secret -h 127.0.0.1 -port 5432 -n operation up"
-  echo "  gin-go-migration migrate -s database/migrations -db postgres -u mintegra -p secret -h 127.0.0.1 -port 5432 -n operation down -1"
+  echo "  gin-go-migration migrate -s database/migrations -db postgres -u username -p secret -h 127.0.0.1 -port 5432 -n operation up"
+  echo "  gin-go-migration migrate -s database/migrations -db postgres -u username -p secret -h 127.0.0.1 -port 5432 -n operation down -1"
   echo "  gin-go-migration update"
   echo "  gin-go-migration version"
   exit 0
