@@ -143,8 +143,8 @@ case "$COMMAND" in
 
     TIMESTAMP=$(date +"%Y%m%d%H%M%S")
     mkdir -p "$SOURCE_DIR"
-    UP_FILE="$SOURCE_DIR/${TIMESTAMP}_${NAME}.up.sql"
-    DOWN_FILE="$SOURCE_DIR/${TIMESTAMP}_${NAME}.down.sql"
+    UP_FILE="$SOURCE_DIR/${TIMESTAMP}00_${NAME}.up.sql"
+    DOWN_FILE="$SOURCE_DIR/${TIMESTAMP}00_${NAME}.down.sql"
 
     echo "-- Migration: $NAME" > "$UP_FILE"
     echo "-- Created at: $(date)" >> "$UP_FILE"
